@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生气的小猴子 - 表情拼图</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            touch-action: none;
+            background-color: #fef3c7; /* 温暖的浅黄色背景 */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .game-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .workspace {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 60vh;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .monkey-base {
+            position: relative;
+            width: 350px;
+            height: 350px;
+            background: #8b4513; /* 棕色 */
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            border: 8px solid #5d2e0a;
+        }
+
+        /* 猴子脸部浅色区域 */
+        .monkey-face-inner {
+            width: 85%;
+            height: 80%;
+            background: #f3d2a2;
+            border-radius: 45% 45% 50% 50%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 40px;
+        }
+
+        /* 猴子耳朵 */
+        .ear {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: #8b4513;
+            border-radius: 50%;
+            z-index: -1;
+            border: 6px solid #5d2e0a;
+        }
+        .ear-left { left: -30px; top: 100px; }
+        .ear-right { right: -30px; top: 100px; }
+
+        /* 眼睛（固定） */
+        .eye {
+            width: 40px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            position: relative;
+            margin: 0 25px;
+            border: 3px solid #333;
+        }
+        .pupil {
+            width: 15px;
+            height: 15px;
+            background: black;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* 零件托盘 */
+        .parts-tray {
+            width: 200px;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.5);
+            border: 4px dashed #d97706;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-around;
+            padding: 20px;
+        }
+
+        .draggable-part {
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.2));
+            transition: transform 0.2s;
+            position: relative;
+            z-index: 50;
+        }
+        .draggable-part:active {
+            cursor: grabbing;
+            transform: scale(1.1);
+        }
+
+        .msg-box {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #b91c1c;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .active-msg {
+            opacity: 1;
+        }
+
+        .reset-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background-color: #d97706;
+            color: white;
+            border-radius: 9999px;
+            font-weight: bold;
+            box-shadow: 0 4px 0 #92400e;
+            transition: all 0.1s;
+        }
+        .reset-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0px 0 #92400e;
+        }
+
+        @media (max-width: 600px) {
+            .workspace {
+                flex-direction: column;
+                height: auto;
+            }
+            .parts-tray {
+                width: 90%;
+                height: 120px;
+                flex-direction: row;
+                margin-top: 20px;
+            }
+            .monkey-base {
+                width: 250px;
+                height: 250px;
+            }
+            .ear { width: 60px; height: 60px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1 class="text-3xl font-bold text-amber-900 mb-4">猴子生气了！😡</h1>
+        <p class="text-amber-700 mb-2">拖动右边的零件到猴子脸上，拼出一个生气的表情吧！</p>
+
+        <div class="workspace" id="workspace">
+            <!-- 猴子主体 -->
+            <div class="monkey-base" id="monkey-head">
+                <div class="ear ear-left"></div>
+                <div class="ear ear-right"></div>
+                <div class="monkey-face-inner">
+                    <div class="flex">
+                        <div class="eye"><div class="pupil"></div></div>
+                        <div class="eye"><div class="pupil"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 零件托盘 -->
+            <div class="parts-tray" id="tray">
+                <!-- 生气的眉毛 -->
+                <div class="draggable-part" id="eyebrow-left" data-type="eyebrow">
+                    <svg width="60" height="30">
+                        <path d="M10,25 L50,5" stroke="#3d1f05" stroke-width="8" stroke-linecap="round" fill="none"/>
+                    </svg>
+                </div>
+                <div class="draggable-part" id="eyebrow-right" data-type="eyebrow">
+                    <svg width="60" height="30">
+                        <path d="M10,5 L50,25" stroke="#3d1f05" stroke-width="8" stroke-linecap="round" fill="none"/>
+                    </svg>
+                </div>
+                <!-- 生气的嘴巴 -->
+                <div class="draggable-part" id="angry-mouth" data-type="mouth">
+                    <svg width="80" height="40">
+                        <path d="M10,30 Q40,0 70,30" stroke="#b91c1c" stroke-width="6" stroke-linecap="round" fill="none"/>
+                    </svg>
+                </div>
+                <!-- 涨红的脸颊 -->
+                <div class="draggable-part" id="blush-left" data-type="blush">
+                    <svg width="40" height="40">
+                        <circle cx="20" cy="20" r="18" fill="rgba(239, 68, 68, 0.6)" />
+                    </svg>
+                </div>
+                <div class="draggable-part" id="blush-right" data-type="blush">
+                    <svg width="40" height="40">
+                        <circle cx="20" cy="20" r="18" fill="rgba(239, 68, 68, 0.6)" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div id="msg" class="msg-box">好生气啊！！呜吱吱！！</div>
+        
+        <button class="reset-btn" onclick="resetGame()">重新开始</button>
+    </div>
+
+    <script>
+        const draggables = document.querySelectorAll('.draggable-part');
+        const workspace = document.getElementById('workspace');
+        const monkeyHead = document.getElementById('monkey-head');
+        const msg = document.getElementById('msg');
+
+        let activePart = null;
+        let offset = { x: 0, y: 0 };
+
+        // 初始化位置
+        function resetGame() {
+            location.reload();
+        }
+
+        // 绑定事件
+        draggables.forEach(part => {
+            part.addEventListener('mousedown', startDrag);
+            part.addEventListener('touchstart', startDrag, { passive: false });
+        });
+
+        function startDrag(e) {
+            e.preventDefault();
+            activePart = e.currentTarget;
+            
+            const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
+            const rect = activePart.getBoundingClientRect();
+            offset.x = clientX - rect.left;
+            offset.y = clientY - rect.top;
+
+            activePart.style.position = 'fixed';
+            activePart.style.width = rect.width + 'px';
+            activePart.style.height = rect.height + 'px';
+            moveAt(clientX, clientY);
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchmove', onTouchMove, { passive: false });
+            document.addEventListener('touchend', endDrag);
+        }
+
+        function onMouseMove(e) {
+            moveAt(e.clientX, e.clientY);
+        }
+
+        function onTouchMove(e) {
+            e.preventDefault();
+            moveAt(e.touches[0].clientX, e.touches[0].clientY);
+        }
+
+        function moveAt(clientX, clientY) {
+            if (!activePart) return;
+            activePart.style.left = (clientX - offset.x) + 'px';
+            activePart.style.top = (clientY - offset.y) + 'px';
+
+            // 检查是否在猴子脸上
+            checkOverlapping();
+        }
+
+        function endDrag() {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', endDrag);
+            document.removeEventListener('touchmove', onTouchMove);
+            document.removeEventListener('touchend', endDrag);
+            
+            if (activePart) {
+                activePart.style.cursor = 'grab';
+                activePart = null;
+            }
+        }
+
+        function checkOverlapping() {
+            const headRect = monkeyHead.getBoundingClientRect();
+            const partRect = activePart.getBoundingClientRect();
+
+            // 如果零件中心在猴子头部区域内
+            const partCenterX = partRect.left + partRect.width / 2;
+            const partCenterY = partRect.top + partRect.height / 2;
+
+            if (
+                partCenterX > headRect.left && 
+                partCenterX < headRect.right && 
+                partCenterY > headRect.top && 
+                partCenterY < headRect.bottom
+            ) {
+                msg.classList.add('active-msg');
+            }
+        }
+    </script>
+</body>
+</html>
